@@ -18,7 +18,8 @@ const generateBtnEl = document.getElementById("generateBtn");
 const statusEl = document.getElementById("status");
 const errorEl = document.getElementById("error");
 const routeListEl = document.getElementById("routeList");
-const routeMapEl = document.getElementById("routeMap");
+const routeMapEl = document.getElementById("routeMapOverlay");
+const overlayToggleEl = document.getElementById("overlayToggle");
 
 const selected = new Set();
 
@@ -188,6 +189,10 @@ function renderRouteMap(route) {
     routeMapEl.appendChild(label);
   });
 }
+
+overlayToggleEl.addEventListener("change", () => {
+  routeMapEl.classList.toggle("hidden", !overlayToggleEl.checked);
+});
 
 generateBtnEl.addEventListener("click", generateRoute);
 renderChips();
