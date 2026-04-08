@@ -72,6 +72,18 @@ Example `POST /route` payload:
   - root `requirements.txt`
 - Deploy from GitHub in Vercel (recommended), or use `vercel --prod` from CLI.
 
+### Deploy from Vercel dashboard (no local CLI needed)
+1. Open Vercel and click **Add New Project**.
+2. Import `immayeast/the_MEET`.
+3. Keep **Root Directory** as `/`.
+4. Framework preset can stay **Other**.
+5. Deploy.
+
+After deploy:
+- Frontend UI: `https://<your-project>.vercel.app/`
+- Health check: `https://<your-project>.vercel.app/health`
+- API docs: `https://<your-project>.vercel.app/docs`
+
 ## Documentation discipline
 - Intent is tracked in `docs/INTENT.md`.
 - Progress and next actions are tracked in `docs/PROGRESS.md`.

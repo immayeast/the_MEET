@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from .models import UserInterestRequest
 from .scraper import cache_info, load_cache, scrape_met_search_page
@@ -9,7 +10,9 @@ from .services import ArtworkStore
 
 app = FastAPI(title="MET Interest Route API", version="0.1.0")
 store = ArtworkStore()
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,7 +63,7 @@ def get_cache_status() -> dict:
 
 @app.get("/")
 def frontend() -> FileResponse:
-    return FileResponse("app/static/index.html")
+    return FileResponse(str(INDEX_FILE))
 
 
 @app.get("/artworks/search")
