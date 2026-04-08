@@ -65,6 +65,13 @@ Example `POST /route` payload:
 - Some detail pages still omit fields (or vary labels), so gallery/period completeness is not guaranteed.
 - Route geography now uses gallery/location/department heuristics, not true floor-plan graph optimization yet.
 
+## Vercel deployment
+- This repo includes Vercel config for FastAPI:
+  - `vercel.json`
+  - `api/index.py`
+  - root `requirements.txt`
+- Deploy from GitHub in Vercel (recommended), or use `vercel --prod` from CLI.
+
 ## Documentation discipline
 - Intent is tracked in `docs/INTENT.md`.
 - Progress and next actions are tracked in `docs/PROGRESS.md`.
