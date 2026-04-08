@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MEeT More Art</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>MEeT More Art</h1>
+      <p class="sub">Interest-based MET route planner (no npm frontend).</p>
+
+      <section class="card">
+        <h2>Your interests</h2>
+        <label class="label" for="freeText">What are you curious about?</label>
+        <textarea id="freeText" rows="4" placeholder="e.g. mythology, portraits, renaissance"></textarea>
+
+        <p class="label">Or pick keywords:</p>
+        <div id="chips" class="chips"></div>
+
+        <label class="label" for="maxStops">Maximum stops: <span id="maxStopsValue">6</span></label>
+        <input id="maxStops" type="range" min="3" max="30" value="6" />
+
+        <label class="label" for="walkPreference">Walk preference</label>
+        <select id="walkPreference">
+          <option value="closer">Walk closer (compact route)</option>
+          <option value="further">Walk further (explore more galleries)</option>
+        </select>
+
+        <button id="generateBtn" class="primary">Generate route</button>
+        <p id="status" class="sub"></p>
+        <p id="error" class="error"></p>
+      </section>
+
+      <section class="card">
+        <h2>Directional gallery map</h2>
+        <p class="sub">Cartoony route graph + MET map reference.</p>
+        <svg id="routeMap" viewBox="0 0 900 450" class="routeMap" aria-label="Route map"></svg>
+        <p>
+          <a
+            href="https://maps.metmuseum.org/?floor=1&lang=en-GB#17/40.779448/-73.963517/-61"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open official MET map
+          </a>
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Suggested route</h2>
+        <ol id="routeList" class="routeList"></ol>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
