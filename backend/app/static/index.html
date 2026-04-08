@@ -35,7 +35,14 @@
 
       <section class="card">
         <h2>Directional gallery map</h2>
-        <p class="sub">Cartoony route graph + MET map reference.</p>
+        <p class="sub">Embedded official MET map + cartoony route graph.</p>
+        <iframe
+          class="metEmbed"
+          title="Official MET interactive map"
+          src="https://maps.metmuseum.org/?floor=1&lang=en-GB#17/40.779448/-73.963517/-61"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+        ></iframe>
         <svg id="routeMap" viewBox="0 0 900 450" class="routeMap" aria-label="Route map"></svg>
         <p>
           <a
