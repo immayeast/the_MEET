@@ -57,7 +57,17 @@ async function generateRoute() {
 
   try {
     const refreshRes = await fetch("/refresh?max_items=80&enrich_limit=30", { method: "POST" });
-    if (!refreshRes.ok) throw new Error("Failed to refresh data");
+    let refreshData = null;
+    try {
+      refreshData = await refreshRes.json();
+    } catch (_) {
+      refreshData = null;
+    }
+    if (!refreshRes.ok || (refreshData && refreshData.ok === false)) {
+      statusEl.textContent = "Live refresh unavailable. Trying existing/cached data...";
+    } else if (refreshData && refreshData.source && refreshData.source !== "live") {
+      statusEl.textContent = `Using ${refreshData.source} data (${refreshData.artworks_loaded} works).`;
+    }
 
     statusEl.textContent = "Building your route...";
 
@@ -74,7 +84,10 @@ async function generateRoute() {
       body: JSON.stringify(payload)
     });
 
-    if (!routeRes.ok) throw new Error("Failed to generate route");
+    if (!routeRes.ok) {
+      const body = await routeRes.text();
+      throw new Error(`Failed to generate route (${routeRes.status}): ${body.slice(0, 120)}`);
+    }
 
     const data = await routeRes.json();
     statusEl.textContent = `Detected interests: ${data.interests_detected.join(", ")}`;

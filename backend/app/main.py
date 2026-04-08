@@ -46,14 +46,45 @@ def refresh(
     max_items: int = Query(default=80, ge=20, le=200),
     enrich_limit: int = Query(default=30, ge=0, le=100),
 ) -> dict:
-    artworks = scrape_met_search_page(max_items=max_items, enrich_limit=enrich_limit)
-    store.refresh(artworks)
-    return {
-        "ok": True,
-        "artworks_loaded": len(artworks),
-        "max_items": max_items,
-        "enrich_limit": enrich_limit,
-    }
+    try:
+        artworks = scrape_met_search_page(max_items=max_items, enrich_limit=enrich_limit)
+        store.refresh(artworks)
+        return {
+            "ok": True,
+            "source": "live",
+            "artworks_loaded": len(artworks),
+            "max_items": max_items,
+            "enrich_limit": enrich_limit,
+        }
+    except Exception as exc:
+        cached = load_cache(max_age_minutes=60 * 24 * 30)
+        if cached:
+            store.refresh(cached)
+            return {
+                "ok": True,
+                "source": "cache",
+                "warning": f"Live refresh failed, using cached dataset: {exc}",
+                "artworks_loaded": len(cached),
+                "max_items": max_items,
+                "enrich_limit": enrich_limit,
+            }
+        if store.artworks:
+            return {
+                "ok": True,
+                "source": "memory",
+                "warning": f"Live refresh failed, using loaded dataset: {exc}",
+                "artworks_loaded": len(store.artworks),
+                "max_items": max_items,
+                "enrich_limit": enrich_limit,
+            }
+        return {
+            "ok": False,
+            "source": "none",
+            "error": f"Live refresh failed and no fallback data available: {exc}",
+            "artworks_loaded": 0,
+            "max_items": max_items,
+            "enrich_limit": enrich_limit,
+        }
 
 
 @app.get("/cache/status")
