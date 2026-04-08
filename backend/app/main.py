@@ -1,6 +1,8 @@
+import os
+
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -12,6 +14,9 @@ app = FastAPI(title="MET Interest Route API", version="0.1.0")
 store = ArtworkStore()
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 INDEX_FILE = STATIC_DIR / "index.html"
+ASSET_VERSION = os.getenv("VERCEL_GIT_COMMIT_SHA", "")[:8] or str(
+    int((STATIC_DIR / "app.js").stat().st_mtime)
+)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.add_middleware(
@@ -93,8 +98,10 @@ def get_cache_status() -> dict:
 
 
 @app.get("/")
-def frontend() -> FileResponse:
-    return FileResponse(str(INDEX_FILE))
+def frontend() -> HTMLResponse:
+    html = INDEX_FILE.read_text(encoding="utf-8")
+    html = html.replace("__ASSET_VERSION__", ASSET_VERSION)
+    return HTMLResponse(content=html)
 
 
 @app.get("/artworks/search")
