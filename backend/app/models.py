@@ -31,6 +31,8 @@ class RouteStop(BaseModel):
     order: int
     artwork: Artwork
     reason: str
+    x: float
+    y: float
 
 
 class RouteResponse(BaseModel):

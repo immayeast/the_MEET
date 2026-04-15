@@ -119,75 +119,142 @@ async function generateRoute() {
   }
 }
 
-function galleryLabel(artwork) {
-  return artwork.gallery || artwork.location || artwork.department || "Unknown";
+let mapScale = 1;
+let mapTranslate = { x: 0, y: 0 };
+let isDraggingMap = false;
+let dragStart = { x: 0, y: 0 };
+const metMapWrap = document.querySelector(".metMapWrap");
+const mapContainer = document.getElementById("mapContainer");
+
+metMapWrap.addEventListener("pointerdown", (e) => {
+  isDraggingMap = true;
+  dragStart = { x: e.clientX, y: e.clientY };
+  metMapWrap.setPointerCapture(e.pointerId);
+});
+
+metMapWrap.addEventListener("pointermove", (e) => {
+  if (!isDraggingMap) return;
+  const dx = e.clientX - dragStart.x;
+  const dy = e.clientY - dragStart.y;
+  mapTranslate.x += dx;
+  mapTranslate.y += dy;
+  dragStart = { x: e.clientX, y: e.clientY };
+  updateMapTransform();
+});
+
+metMapWrap.addEventListener("pointerup", (e) => {
+  isDraggingMap = false;
+  metMapWrap.releasePointerCapture(e.pointerId);
+});
+
+metMapWrap.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const zoomFactor = -e.deltaY * 0.002;
+  const oldScale = mapScale;
+  mapScale = Math.max(0.2, Math.min(mapScale + zoomFactor, 5));
+  
+  const rect = metMapWrap.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  
+  // Keep mouse position pinned during zoom
+  mapTranslate.x = mouseX - (mouseX - mapTranslate.x) * (mapScale / oldScale);
+  mapTranslate.y = mouseY - (mouseY - mapTranslate.y) * (mapScale / oldScale);
+  
+  updateMapTransform();
+}, { passive: false });
+
+function updateMapTransform() {
+  if(mapContainer) {
+    mapContainer.setAttribute("transform", `translate(${mapTranslate.x}, ${mapTranslate.y}) scale(${mapScale})`);
+  }
 }
 
-function seededPos(seed, i, total) {
-  const t = (2 * Math.PI * i) / Math.max(1, total);
-  const r = 150 + (seed % 70);
-  const x = 450 + Math.cos(t) * r;
-  const y = 225 + Math.sin(t) * (r * 0.6);
-  return { x, y };
+function galleryLabel(stop) {
+  return stop.artwork.gallery || stop.artwork.location || stop.artwork.department || "Unknown";
 }
 
 function renderRouteMap(route) {
-  routeMapEl.innerHTML = "";
+  if (!mapContainer) return;
+  mapContainer.innerHTML = "";
   if (!route || route.length === 0) return;
 
-  const groups = [];
-  const seen = new Set();
+  const width = metMapWrap.clientWidth;
+  const height = metMapWrap.clientHeight;
+  
+  // Auto-fit to center: find bounding box
+  let minX = Infinity, minY = Infinity;
+  let maxX = -Infinity, maxY = -Infinity;
+  
   for (const stop of route) {
-    const g = galleryLabel(stop.artwork);
-    if (!seen.has(g)) {
-      seen.add(g);
-      groups.push(g);
-    }
+    if(stop.x < minX) minX = stop.x;
+    if(stop.y < minY) minY = stop.y;
+    if(stop.x > maxX) maxX = stop.x;
+    if(stop.y > maxY) maxY = stop.y;
   }
-
-  const posByGallery = new Map();
-  for (let i = 0; i < groups.length; i++) {
-    const seed = Array.from(groups[i]).reduce((a, c) => a + c.charCodeAt(0), 0);
-    posByGallery.set(groups[i], seededPos(seed, i, groups.length));
-  }
+  
+  const bWidth = Math.max(maxX - minX, 100);
+  const bHeight = Math.max(maxY - minY, 100);
+  
+  mapScale = Math.min((width - 80) / bWidth, (height - 80) / bHeight);
+  mapScale = Math.min(Math.max(mapScale, 0.4), 2);
+  
+  mapTranslate.x = width/2 - (minX + bWidth/2) * mapScale;
+  mapTranslate.y = height/2 - (minY + bHeight/2) * mapScale;
+  updateMapTransform();
 
   for (let i = 0; i < route.length - 1; i++) {
-    const a = posByGallery.get(galleryLabel(route[i].artwork));
-    const b = posByGallery.get(galleryLabel(route[i + 1].artwork));
+    const a = route[i];
+    const b = route[i + 1];
+    
+    // Check if points are identical or roughly identical to skip overlapping lines
+    if(Math.abs(a.x - b.x) < 2 && Math.abs(a.y - b.y) < 2) continue;
+
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", String(a.x));
     line.setAttribute("y1", String(a.y));
     line.setAttribute("x2", String(b.x));
     line.setAttribute("y2", String(b.y));
     line.setAttribute("class", "mapLine");
-    routeMapEl.appendChild(line);
+    mapContainer.appendChild(line);
   }
 
-  groups.forEach((g, idx) => {
-    const p = posByGallery.get(g);
+  // Draw grouped nodes by position to avoid overlap issues
+  const posGroups = new Map();
+  for (let i=0; i < route.length; i++) {
+      const stop = route[i];
+      const key = `${Math.round(stop.x)},${Math.round(stop.y)}`;
+      if(!posGroups.has(key)) posGroups.set(key, { stops: [], x: stop.x, y: stop.y });
+      posGroups.get(key).stops.push({ idx: i + 1, gallery: galleryLabel(stop) });
+  }
+
+  for (const [key, grp] of posGroups.entries()) {
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("cx", String(p.x));
-    circle.setAttribute("cy", String(p.y));
-    circle.setAttribute("r", "28");
+    circle.setAttribute("cx", String(grp.x));
+    circle.setAttribute("cy", String(grp.y));
+    circle.setAttribute("r", "16");
     circle.setAttribute("class", "mapNode");
-    routeMapEl.appendChild(circle);
+    mapContainer.appendChild(circle);
 
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute("x", String(p.x));
-    text.setAttribute("y", String(p.y + 4));
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("class", "mapNodeText");
-    text.textContent = String(idx + 1);
-    routeMapEl.appendChild(text);
+    const labels = Array.from(new Set(grp.stops.map(s => s.gallery)));
+    
+    const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    textGroup.setAttribute("x", String(grp.x));
+    textGroup.setAttribute("y", String(grp.y + 4));
+    textGroup.setAttribute("text-anchor", "middle");
+    textGroup.setAttribute("class", "mapNodeText");
+    textGroup.textContent = grp.stops.map(s => s.idx).join(",");
+    mapContainer.appendChild(textGroup);
 
+    const labelStr = labels.join(" / ");
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    label.setAttribute("x", String(p.x));
-    label.setAttribute("y", String(p.y + 48));
+    label.setAttribute("x", String(grp.x));
+    label.setAttribute("y", String(grp.y + 30));
     label.setAttribute("text-anchor", "middle");
     label.setAttribute("class", "mapLabel");
-    label.textContent = g.length > 22 ? `${g.slice(0, 22)}...` : g;
-    routeMapEl.appendChild(label);
-  });
+    label.textContent = labelStr.length > 25 ? `${labelStr.slice(0, 25)}...` : labelStr;
+    mapContainer.appendChild(label);
+  }
 }
 
 overlayToggleEl.addEventListener("change", () => {
