@@ -119,89 +119,16 @@ async function generateRoute() {
   }
 }
 
-let mapScale = 1;
-let mapTranslate = { x: 0, y: 0 };
-let isDraggingMap = false;
-let dragStart = { x: 0, y: 0 };
-const metMapWrap = document.querySelector(".metMapWrap");
-const mapContainer = document.getElementById("mapContainer");
-
-metMapWrap.addEventListener("pointerdown", (e) => {
-  isDraggingMap = true;
-  dragStart = { x: e.clientX, y: e.clientY };
-  metMapWrap.setPointerCapture(e.pointerId);
-});
-
-metMapWrap.addEventListener("pointermove", (e) => {
-  if (!isDraggingMap) return;
-  const dx = e.clientX - dragStart.x;
-  const dy = e.clientY - dragStart.y;
-  mapTranslate.x += dx;
-  mapTranslate.y += dy;
-  dragStart = { x: e.clientX, y: e.clientY };
-  updateMapTransform();
-});
-
-metMapWrap.addEventListener("pointerup", (e) => {
-  isDraggingMap = false;
-  metMapWrap.releasePointerCapture(e.pointerId);
-});
-
-metMapWrap.addEventListener("wheel", (e) => {
-  e.preventDefault();
-  const zoomFactor = -e.deltaY * 0.002;
-  const oldScale = mapScale;
-  mapScale = Math.max(0.2, Math.min(mapScale + zoomFactor, 5));
-  
-  const rect = metMapWrap.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-  
-  // Keep mouse position pinned during zoom
-  mapTranslate.x = mouseX - (mouseX - mapTranslate.x) * (mapScale / oldScale);
-  mapTranslate.y = mouseY - (mouseY - mapTranslate.y) * (mapScale / oldScale);
-  
-  updateMapTransform();
-}, { passive: false });
-
-function updateMapTransform() {
-  if(mapContainer) {
-    mapContainer.setAttribute("transform", `translate(${mapTranslate.x}, ${mapTranslate.y}) scale(${mapScale})`);
-  }
-}
+const routeMapEl = document.getElementById("routeMapOverlay");
 
 function galleryLabel(stop) {
   return stop.artwork.gallery || stop.artwork.location || stop.artwork.department || "Unknown";
 }
 
 function renderRouteMap(route) {
-  if (!mapContainer) return;
-  mapContainer.innerHTML = "";
+  if (!routeMapEl) return;
+  routeMapEl.innerHTML = "";
   if (!route || route.length === 0) return;
-
-  const width = metMapWrap.clientWidth;
-  const height = metMapWrap.clientHeight;
-  
-  // Auto-fit to center: find bounding box
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-  
-  for (const stop of route) {
-    if(stop.x < minX) minX = stop.x;
-    if(stop.y < minY) minY = stop.y;
-    if(stop.x > maxX) maxX = stop.x;
-    if(stop.y > maxY) maxY = stop.y;
-  }
-  
-  const bWidth = Math.max(maxX - minX, 100);
-  const bHeight = Math.max(maxY - minY, 100);
-  
-  mapScale = Math.min((width - 80) / bWidth, (height - 80) / bHeight);
-  mapScale = Math.min(Math.max(mapScale, 0.4), 2);
-  
-  mapTranslate.x = width/2 - (minX + bWidth/2) * mapScale;
-  mapTranslate.y = height/2 - (minY + bHeight/2) * mapScale;
-  updateMapTransform();
 
   for (let i = 0; i < route.length - 1; i++) {
     const a = route[i];
@@ -216,7 +143,7 @@ function renderRouteMap(route) {
     line.setAttribute("x2", String(b.x));
     line.setAttribute("y2", String(b.y));
     line.setAttribute("class", "mapLine");
-    mapContainer.appendChild(line);
+    routeMapEl.appendChild(line);
   }
 
   // Draw grouped nodes by position to avoid overlap issues
@@ -234,7 +161,7 @@ function renderRouteMap(route) {
     circle.setAttribute("cy", String(grp.y));
     circle.setAttribute("r", "16");
     circle.setAttribute("class", "mapNode");
-    mapContainer.appendChild(circle);
+    routeMapEl.appendChild(circle);
 
     const labels = Array.from(new Set(grp.stops.map(s => s.gallery)));
     
@@ -244,7 +171,7 @@ function renderRouteMap(route) {
     textGroup.setAttribute("text-anchor", "middle");
     textGroup.setAttribute("class", "mapNodeText");
     textGroup.textContent = grp.stops.map(s => s.idx).join(",");
-    mapContainer.appendChild(textGroup);
+    routeMapEl.appendChild(textGroup);
 
     const labelStr = labels.join(" / ");
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -253,7 +180,7 @@ function renderRouteMap(route) {
     label.setAttribute("text-anchor", "middle");
     label.setAttribute("class", "mapLabel");
     label.textContent = labelStr.length > 25 ? `${labelStr.slice(0, 25)}...` : labelStr;
-    mapContainer.appendChild(label);
+    routeMapEl.appendChild(label);
   }
 }
 

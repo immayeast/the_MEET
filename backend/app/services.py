@@ -56,12 +56,12 @@ class ArtworkStore:
             floor = num // 100
             tens = (num % 100) // 10
             ones = num % 10
-            x = ones * 70.0 + (floor * 300.0)
-            y = tens * 70.0 + (floor * 150.0)
-            return x, y
+            x = 200 + (tens * 60.0) + (ones * 12.0)
+            y = 100 + (floor * 150.0) + (ones * 24.0)
+            return min(850, max(50, x)), min(400, max(50, y))
         h = int(hashlib.md5(key.encode()).hexdigest(), 16)
-        x = (h % 15) * 60.0
-        y = ((h // 15) % 15) * 60.0
+        x = 100 + (h % 700)
+        y = 100 + ((h // 700) % 250)
         return x, y
 
     def _optimize_route_sgd(self, stops: List[Artwork], walk_preference: str) -> List[tuple[Artwork, float, float]]:
@@ -78,12 +78,12 @@ class ArtworkStore:
         dist = [[0.0] * n for _ in range(n)]
         for i in range(n):
             for j in range(n):
-                base_dist = abs(coords[i][0] - coords[j][0]) + abs(coords[i][1] - coords[j][1])
-                if i != j and coords[i] != coords[j]:
-                    base_dist += 30.0
+                dx = coords[i][0] - coords[j][0]
+                dy = coords[i][1] - coords[j][1]
+                euclidean = math.sqrt(dx * dx + dy * dy)
                 if walk_preference == "further":
-                    base_dist = -base_dist + 500.0
-                dist[i][j] = base_dist
+                    euclidean = -euclidean + 800.0
+                dist[i][j] = euclidean
         
         W = [[0.0] * n for _ in range(n)]
         epochs = 300
