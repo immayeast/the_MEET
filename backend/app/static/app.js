@@ -120,6 +120,7 @@ async function generateRoute() {
 }
 
 const routeMapEl = document.getElementById("routeMapOverlay");
+const mapTooltip = document.getElementById("mapTooltip");
 
 function galleryLabel(stop) {
   return stop.artwork.gallery || stop.artwork.location || stop.artwork.department || "Unknown";
@@ -134,7 +135,6 @@ function renderRouteMap(route) {
     const a = route[i];
     const b = route[i + 1];
     
-    // Check if points are identical or roughly identical to skip overlapping lines
     if(Math.abs(a.x - b.x) < 2 && Math.abs(a.y - b.y) < 2) continue;
 
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -146,21 +146,49 @@ function renderRouteMap(route) {
     routeMapEl.appendChild(line);
   }
 
-  // Draw grouped nodes by position to avoid overlap issues
   const posGroups = new Map();
-  for (let i=0; i < route.length; i++) {
+  for (let i = 0; i < route.length; i++) {
       const stop = route[i];
       const key = `${Math.round(stop.x)},${Math.round(stop.y)}`;
       if(!posGroups.has(key)) posGroups.set(key, { stops: [], x: stop.x, y: stop.y });
-      posGroups.get(key).stops.push({ idx: i + 1, gallery: galleryLabel(stop) });
+      posGroups.get(key).stops.push({ idx: i + 1, gallery: galleryLabel(stop), artwork: stop.artwork });
   }
 
   for (const [key, grp] of posGroups.entries()) {
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("cx", String(grp.x));
     circle.setAttribute("cy", String(grp.y));
-    circle.setAttribute("r", "16");
+    circle.setAttribute("r", "20");
     circle.setAttribute("class", "mapNode");
+    
+    // Add tooltip events
+    circle.addEventListener("mouseenter", (e) => {
+      mapTooltip.classList.remove("hidden");
+      let html = "";
+      grp.stops.forEach(s => {
+        const a = s.artwork;
+        html += `<div><strong>${s.idx}. ${escapeHtml(a.title || "Untitled")}</strong>`;
+        if (a.image_url) {
+          html += `<img src="${escapeHtml(a.image_url)}" alt=""/>`;
+        }
+        html += `</div>`;
+      });
+      mapTooltip.innerHTML = html;
+    });
+    
+    circle.addEventListener("mousemove", (e) => {
+      // SVG bounds calculations
+      const rect = routeMapEl.getBoundingClientRect();
+      const left = e.clientX - rect.left + 15;
+      const top = e.clientY - rect.top + 15;
+      mapTooltip.style.left = left + "px";
+      mapTooltip.style.top = top + "px";
+    });
+    
+    circle.addEventListener("mouseleave", () => {
+      mapTooltip.classList.add("hidden");
+    });
+    
     routeMapEl.appendChild(circle);
 
     const labels = Array.from(new Set(grp.stops.map(s => s.gallery)));
